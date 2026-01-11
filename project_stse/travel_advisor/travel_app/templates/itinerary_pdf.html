@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Itinerariu PDF</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1, h2 {
+            text-align: center;
+        }
+        img {
+            width: 100%;
+            height: auto;
+        }
+        .instructions {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Itinerariu pentru {{ itinerary.city.name }}</h1>
+
+    <h2>Harta traseului:</h2>
+    <img src="{{ map_url }}" alt="Harta traseului">
+
+    <h2>Indicații pas cu pas:</h2>
+    <ol class="instructions">
+        {% for step in steps %}
+            <li>{{ step.instruction }} ({{ step.distance|floatformat:2 }} m)</li>
+        {% endfor %}
+    </ol>
+</body>
+</html>

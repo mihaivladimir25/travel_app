@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ location.name }}</title>
+    {% load static %}
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 36px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        p {
+            font-size: 16px;
+            color: #555;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            font-size: 28px;
+            color: #333;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+            width: 60%;
+        }
+
+        li {
+            background-color: #fff;
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        li:hover {
+            transform: scale(1.03);
+        }
+
+        a {
+            text-decoration: none;
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 20px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            margin-top: 20px;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <h1>{{ location.name }}</h1>
+
+    <h3>Visiting Hours: {{ location.schedule }}</h3>
+    <p>{{ location.description }}</p>
+
+    <div class="gallery">
+        {% for image in images %}
+            <img src="{{ image.image.url }}" alt="Image {{ location.name }}">
+        {% endfor %}
+    </div>
+
+    <h3>Reviews:</h3>
+    <div>
+        {% for review in reviews %}
+            <div class="review">
+                <strong>{{ review.user.username }}</strong> - Rating: {{ review.rating }}/5<br>
+                <p>{{ review.comment }}</p>
+                <small>{{ review.created_at }}</small>
+            </div>
+        {% empty %}
+            <p>There are no reviews for this location.</p>
+        {% endfor %}
+    </div>
+
+    <h3>Add a Review:</h3>
+    <form method="POST" action="{% url 'add_review' location.id %}">
+        {% csrf_token %}
+        <label for="comment">Comment:</label><br>
+        <textarea name="comment" rows="4" cols="50" required></textarea><br>
+        <button type="submit">Submit Review</button>
+    </form>
+</body>
+</html>
