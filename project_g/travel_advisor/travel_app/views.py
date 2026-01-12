@@ -16,6 +16,10 @@ from django.contrib.auth import login, authenticate, update_session_auth_hash
 from django.shortcuts import redirect
 from .forms import *
 from elasticsearch import Elasticsearch
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 ORS_API_KEY = '5b3ce3597851110001cf624883fa224470104f559740f3027dce1307'
 
@@ -43,31 +47,48 @@ def city_page(request, city_name):
     locations = Location.objects.filter(city=city, is_approved=True)
     return render(request, 'city_page.html', {'city': city, 'locations': locations})
 
+@swagger_auto_schema(
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'locations': openapi.Schema(
+                type=openapi.TYPE_ARRAY,
+                items=openapi.Items(type=openapi.TYPE_INTEGER)
+            )
+        },
+        required=['locations']
+    ),
+    responses={200: openapi.Response("Generated itinerary")}
+)
+@api_view(['POST'])
 def generate_itinerary(request):
-    if request.method == "POST":
-        data = json.loads(request.body)
-        selected_ids = data.get('locations', [])
-        selected_locations = Location.objects.filter(id__in=selected_ids)
+    selected_ids = request.data.get('locations', [])
+    locations = Location.objects.filter(id__in=selected_ids)
 
-        coordinates = [[loc.longitude, loc.latitude] for loc in selected_locations]
+    if locations.count() < 2:
+        return Response({"error": "Select at least 2 locations"}, status=400)
 
-        ors_url = 'https://api.openrouteservice.org/v2/directions/driving-car/geojson'
-        headers = {'Authorization': ORS_API_KEY, 'Content-Type': 'application/json'}
-        payload = {"coordinates": coordinates}
+    coordinates = [[loc.longitude, loc.latitude] for loc in locations]
 
-        response = requests.post(ors_url, headers=headers, json=payload)
-        route_data = response.json()
+    ors_url = "https://api.openrouteservice.org/v2/directions/driving-car/geojson"
+    headers = {
+        "Authorization": ORS_API_KEY,
+        "Content-Type": "application/json"
+    }
 
-        geometry = route_data['features'][0]['geometry']
-        distance = route_data['features'][0]['properties']['summary']['distance'] / 1000
-        duration = route_data['features'][0]['properties']['summary']['duration'] / 60
+    res = requests.post(ors_url, headers=headers, json={"coordinates": coordinates}).json()
 
-        return JsonResponse({
-            "geometry": geometry,
-            "distance": round(distance, 2),
-            "duration": round(duration, 2),
-            "itinerary": " ➔ ".join([loc.name for loc in selected_locations])
-        })
+    feature = res["features"][0]
+    distance = feature["properties"]["summary"]["distance"] / 1000
+    duration = feature["properties"]["summary"]["duration"] / 60
+
+    return Response({
+        "geometry": feature["geometry"],
+        "distance": round(distance, 2),
+        "duration": round(duration, 2),
+        "itinerary": " ➔ ".join([loc.name for loc in locations])
+    })
 
 @staff_member_required
 def approve_location(request, location_id):
@@ -216,24 +237,25 @@ def change_password(request):
 
     return render(request, 'change_password.html', {'form': form})
 
+
+@swagger_auto_schema(
+    method='get',
+    manual_parameters=[
+        openapi.Parameter('q', openapi.IN_QUERY, description="Search term", type=openapi.TYPE_STRING)
+    ],
+    responses={200: openapi.Response("List of locations")}
+)
+@api_view(['GET'])
 def search_locations(request):
-    q = request.GET.get("q")
+    q = request.GET.get("q", "")
 
-    res = es.search(index="locations", body={
-        "query": {
-            "multi_match": {
-                "query": q,
-                "fields": ["name", "description"],
-                "fuzziness": "AUTO"
-            }
-        }
-    })
+    results = Location.objects.filter(name__icontains=q)
 
-    return JsonResponse([
-        {
-            "id": h["_id"],
-            "name": h["_source"]["name"],
-            "city": h["_source"]["city"],
-            "type": h["_source"]["location_type"]
-        } for h in res["hits"]["hits"]
-    ], safe=False)
+    data = [{
+        "id": loc.id,
+        "name": loc.name,
+        "city": loc.city.name,
+        "type": loc.location_type
+    } for loc in results]
+
+    return Response(data)
