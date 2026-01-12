@@ -20,6 +20,10 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from rest_framework import serializers
 
 ORS_API_KEY = '5b3ce3597851110001cf624883fa224470104f559740f3027dce1307'
 
@@ -228,7 +232,7 @@ def change_password(request):
         if form.is_valid():
             user = form.save()
             update_session_auth_hash(request, user)
-            messages.success(request, 'Parola a fost schimbată cu succes!')
+            messages.success(request, 'Parola a fost schimbata cu succes!')
             return redirect('profile', username=request.user.username)
         else:
             messages.error(request, 'Te rugam să corectezi erorile.')
@@ -238,24 +242,43 @@ def change_password(request):
     return render(request, 'change_password.html', {'form': form})
 
 
-@swagger_auto_schema(
-    method='get',
-    manual_parameters=[
-        openapi.Parameter('q', openapi.IN_QUERY, description="Search term", type=openapi.TYPE_STRING)
-    ],
-    responses={200: openapi.Response("List of locations")}
-)
-@api_view(['GET'])
-def search_locations(request):
-    q = request.GET.get("q", "")
+def api_playground(request):
+    return render(request, "api_playground.html")
 
-    results = Location.objects.filter(name__icontains=q)
+
+class LocationSearchResultSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    name = serializers.CharField()
+    city = serializers.CharField()
+    type = serializers.CharField()
+
+
+@extend_schema(
+    parameters=[],
+    responses=LocationSearchResultSerializer(many=True),
+)
+@api_view(["GET"])
+def search_locations(request):
+    q = request.GET.get("q", "").strip()
+    if not q:
+        return Response([])
+
+    res = es.search(index="locations", body={
+        "query": {
+            "multi_match": {
+                "query": q,
+                "fields": ["name^3", "description"],
+                "fuzziness": "AUTO"
+            }
+        }
+    })
 
     data = [{
-        "id": loc.id,
-        "name": loc.name,
-        "city": loc.city.name,
-        "type": loc.location_type
-    } for loc in results]
+        "id": h["_id"],
+        "name": h["_source"].get("name", ""),
+        "city": h["_source"].get("city", ""),
+        "type": h["_source"].get("location_type", ""),
+    } for h in res["hits"]["hits"]]
 
     return Response(data)
+

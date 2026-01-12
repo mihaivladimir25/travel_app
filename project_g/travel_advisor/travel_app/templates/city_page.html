@@ -94,6 +94,35 @@
         }
     </style>
 </head>
+<!--<script>-->
+<!--document.getElementById("search").addEventListener("keyup", function(){-->
+<!--    fetch(`http://127.0.0.1:8000/api/search-locations/?q=${this.value}`)-->
+<!--    .then(r => r.json())-->
+<!--    .then(data => {-->
+<!--        const container = document.getElementById("results");-->
+<!--        container.innerHTML = "";-->
+
+<!--        data.forEach(loc => {-->
+<!--            const el = document.createElement("div");-->
+<!--            el.style.cursor = "pointer";-->
+<!--            el.style.margin = "4px";-->
+<!--            el.innerHTML = `📍 <b>${loc.name}</b> (${loc.type})`;-->
+
+<!--            el.onclick = () => highlightOnMap(loc.name);-->
+<!--            container.appendChild(el);-->
+<!--        });-->
+<!--    })-->
+<!--});-->
+
+<!--function highlightOnMap(name){-->
+<!--    markers.forEach(m => {-->
+<!--        if(m.getPopup().getContent().includes(name)){-->
+<!--            m.openPopup();-->
+<!--            map.setView(m.getLatLng(), 15);-->
+<!--        }-->
+<!--    });-->
+<!--}-->
+<!--</script>-->
 <body>
     <h1>Explore {{ city.name }}</h1>
 

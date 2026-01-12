@@ -19,4 +19,5 @@ urlpatterns = [
     path('profile/edit/', views.edit_profile, name='edit_profile'),
     path('profile/change-password/', views.change_password, name='change_password'),
     path("api/search-locations/", views.search_locations, name='search_locations'),
+    path("api/", views.api_playground, name="api_playground"),
 ]
